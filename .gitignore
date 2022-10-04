@@ -1,0 +1,14 @@
+## These files contain our java preprocessing work 
+java/
+
+## These files contain our virtual environment, instead we should upload the requirements.txt file
+env/
+
+## These files contain our vscode configurations
+.vscode/
+
+## Pycache (Pre-compiled byte code that helps our code run faster
+**/__pycache__
+
+## Our chrome driver, instead we upload the zipped file that allows users to create their own 
+chromedriver
