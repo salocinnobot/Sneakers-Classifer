@@ -39,21 +39,6 @@ def get_database():
    # Return the connection to the instance 
     return client
 
-def load_images(image_urls):
-    images = []
-
-    ## Open the image, resize, and convert to bytes
-    for iu in image_urls:
-        try: 
-            image = Image.open(urllib.request.urlopen(iu)).resize((256,256))
-            image_bytes = io.BytesIO()
-            image.save(image_bytes, format='JPEG')
-            images.append(image_bytes.getvalue())
-        except Exception as e:
-            print(e)
-    return images
-    
-
 
 if __name__ == "__main__":
 
@@ -61,8 +46,7 @@ if __name__ == "__main__":
 
     ## Read the JSON file that contains the sneaker information from sneakers-api 
     folder = os.path.abspath(os.curdir)
-    java = os.path.join(folder, "java")
-    file = os.path.join(java, "sneaker_json.json")
+    file = os.path.join(folder, "sneaker_json.json")
 
     with open(file, "rb") as read:
         sneaker_json = json.load(read)
@@ -99,7 +83,7 @@ if __name__ == "__main__":
     collection = db['test']
 
     ## Specify the driver path
-    driver_path = '/Users/nicolastobon/Library/Mobile Documents/com~apple~CloudDocs/Data Projects/StockX API Testing/chromedriver'
+    driver_path = os.path.join(os.path.abspath(os.curdir), 'chromedriver')
     driver = eis.select_driver(driver_path)
 
     ## Call extract: Scrapes Google Images and returns the urls for the product images
@@ -118,13 +102,13 @@ if __name__ == "__main__":
             count +=1
             query = sneaker_data["query"]
             image_links = eis.extract(query, 10, driver, 1) 
-            image_binaries = load_images(image_links)
+            image_binaries = eis.load_images(image_links)
             sneaker_dict[index]['image_links'] = image_links
             sneaker_dict[index]['images'] = image_binaries
             collection.insert_one({index: sneaker_dict[index]})
             #image = collection.find_one()
             #read_image(image)
-            if count == 4: break;
+            if count == 2: break;
     except Exception as e: 
         print(e)
 

@@ -2,6 +2,12 @@
 from ssl import Options
 from webbrowser import Chrome
 
+## Image Manipulation
+import urllib
+from PIL import Image
+import matplotlib.pyplot as plt
+import io
+
 ## Saving image
 import requests
 import time
@@ -29,6 +35,32 @@ def save_image(url, path):
             shutil.copyfileobj(response.raw, out_file)
     except Exception as e:
         print(e)
+
+## Tests if our images can be saved as JPEG
+def test_image(url):
+    try: 
+        image = Image.open(urllib.request.urlopen(url)).resize((256,256))
+        image_bytes = io.BytesIO()
+        image.save(image_bytes, format='JPEG')
+    except Exception as e: 
+        raise(e)
+
+
+## Converts our images from url to image, resizes them, and saves them as binary then returns a list of images in binary
+def load_images(image_urls):
+
+    images = []
+
+    ## Open the image, resize, and convert to bytes
+    for iu in image_urls:
+        try: 
+            image = Image.open(urllib.request.urlopen(iu)).resize((256,256))
+            image_bytes = io.BytesIO()
+            image.save(image_bytes, format='JPEG')
+            images.append(image_bytes.getvalue())
+        except Exception as e:
+            print(e)
+    return images
 
 ## Driver
 def select_driver(driver_path):
@@ -85,8 +117,9 @@ def extract(query, max_num_links, driver, sleep):
                             url = image.get_attribute('src')
                             try:
                                 urllib.request.urlopen(url)
+                                test_image(url)
                             except: 
-                                print("Error Here")
+                                print("Error Here, going to the next image")
                                 continue;
                             urls.add(url)
                             print(f'Amount of images {len(urls)} | url: {url}')
