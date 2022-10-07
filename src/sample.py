@@ -6,6 +6,7 @@ import time
 import requests 
 import numpy as np
 import os
+import sys
 
 ## Image Manipulation
 import urllib
@@ -21,7 +22,7 @@ import pickle
 from bson.binary import Binary, USER_DEFINED_SUBTYPE
 
 ## Module Imports
-import extract_images as eis
+import src.extract_images as eis
 
 #def save_locally(): 
      #for (file_num, image) in enumerate(image_links): 
@@ -57,22 +58,19 @@ if __name__ == "__main__":
 # Data Processing - Data Cleaning
 
     ## Let's find any sneakers re-sale items that are not specifically sneakers, and filter them out
-    word_filters = ['tshirt','sweater','hoodie', 'jacket', 'pants', 'shorts']
-    sneaker_df["notShoe"] = sneaker_df["shoeName"].apply(lambda x : any(word in x.lower() for word in word_filters))
-    sneaker_df = sneaker_df[sneaker_df["notShoe"] == False]
+    sneaker_df = sneaker_df[sneaker_df['category'] == 'sneakers']
 
-    ## We know that none of our styleID's are NA
-    print(any(sneaker_df.notna()['styleID'] == False))
-    assert(len(sneaker_df) == len(sneaker_df['styleID']))
+    ## We know that none of our shoeNames are NA
+    assert(len(sneaker_df) == len(sneaker_df['shoeName']))
 
     ## Let's set our dataframe index to be our unique_id which will be the styleID
-    sneaker_df = sneaker_df.set_index('styleID')    
+    sneaker_df = sneaker_df.set_index('shoeName')    
 
     ## We're going to take the shoe_name, silhoutte, styleId, and colorway to be our unique_query parameters
-    unique_id = pd.DataFrame(sneaker_df[['shoeName', 'silhoutte', 'colorway']].agg('-'.join, axis = 1), columns=['query'])
+    query = pd.DataFrame(sneaker_df[['silhoutte', 'colorway']].agg('-'.join, axis = 1), columns=['query'])
 
     ## Let's add the query column to our sneaker's dataframe
-    sneaker_df['query'] = (unique_id.index + '-' + unique_id['query']).to_list()
+    sneaker_df['query'] = (query.index + '-' + query['query']).to_list()
 
     ## Create Shoe Objects -- Future Steps
 
@@ -86,11 +84,6 @@ if __name__ == "__main__":
     driver_path = os.path.join(os.path.abspath(os.curdir), 'chromedriver')
     driver = eis.select_driver(driver_path)
 
-    ## Call extract: Scrapes Google Images and returns the urls for the product images
-    #query = 'DN3707-160-Jordan 3 Retro Fire Red (2022)-Jordan 3 Retro-White/Fire Red/Cement Grey/Black'
-    #image_links = eis.extract(query, 10, driver, 1)
-    #print(image_links)
-
     ## Here we create a dict of our dataframe, and iterate through the key's, and passing the query keyword to our extract function. 
     ## We try opening the image url before we decide to save it, thus ensuring that we have an equal amount of images in our DB
     sneaker_dict = sneaker_df.to_dict(orient = 'index')
@@ -99,20 +92,22 @@ if __name__ == "__main__":
 
     try:
         for (index, sneaker_data) in sneaker_dict.items():
-            count +=1
+            count+=1
             query = sneaker_data["query"]
-            image_links = eis.extract(query, 10, driver, 1) 
-            image_binaries = eis.load_images(image_links)
-            sneaker_dict[index]['image_links'] = image_links
-            sneaker_dict[index]['images'] = image_binaries
+            images_data = eis.extract(query, 10, driver, 1) 
+            print(len(images_data['binaries']), len(images_data['urls']))
+            assert(len(images_data['binaries']) == 10 & len(images_data['urls']) == 10)
+            #image_binaries = eis.load_images(image_links)
+
+            sneaker_dict[index]['image_links'] = images_data['urls']
+            sneaker_dict[index]['images'] = images_data['binaries']
+
             collection.insert_one({index: sneaker_dict[index]})
             #image = collection.find_one()
             #read_image(image)
-            if count == 2: break;
-    except Exception as e: 
-        print(e)
-
-  ## cannot write mode RGBA as JPEG
+            if count == 10: break;
+    except Exception as e:
+        raise(e)
     
 
 
