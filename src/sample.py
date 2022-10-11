@@ -22,7 +22,7 @@ import pickle
 from bson.binary import Binary, USER_DEFINED_SUBTYPE
 
 ## Module Imports
-import src.extract_images as eis
+import extract_images as eis
 
 #def save_locally(): 
      #for (file_num, image) in enumerate(image_links): 
@@ -101,11 +101,10 @@ if __name__ == "__main__":
 
             sneaker_dict[index]['image_links'] = images_data['urls']
             sneaker_dict[index]['images'] = images_data['binaries']
-
-            collection.insert_one({index: sneaker_dict[index]})
-            #image = collection.find_one()
-            #read_image(image)
-            if count == 10: break;
+        
+        sneaker_df = pd.DataFrame.from_dict(sneaker_dict, orient = 'index')
+        items = [{sneaker: details} for (sneaker,details) in sneaker_df.to_dict(orient='index').items()]
+        collection.insert_many(items)
     except Exception as e:
         raise(e)
     
