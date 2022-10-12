@@ -28,16 +28,20 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-## Saving Image
-def save_image(url, path): 
+## Creates directory if it does not exits
+def check_dir(folder, create: bool):
+    root = os.path.abspath(os.path.curdir)
+    if folder not in os.listdir(root) and create:
+        os.mkdir(os.path.join(root, folder))
+    return 
+
+## Saving image to our url path
+def save_image(binary, path): 
     try:
-        response = requests.get(url, stream = True)
-            # delay to avoid corrupted previews
-        time.sleep(1)
-        with open(path, 'wb+') as out_file:
-            shutil.copyfileobj(response.raw, out_file)
+        with open(path, 'wb+') as file:
+            file.write(binary)
     except Exception as e:
-        print(e)
+        raise(e)
 
 ## Tests to see if our url is valid, and return the url
 def test_url(url): 
@@ -84,7 +88,7 @@ def load_images(image_urls):
             raise(e)
     return images
 
-## Driver
+## Driver for Selenium
 def select_driver(driver_path):
     
     service = Service(driver_path)
@@ -109,11 +113,9 @@ def category(resell_link, driver, sleep):
 
 
 ## Extracting Images
-def extract(query, max_num_links, driver, sleep): 
+def extract(query, max_num_links, path, driver, sleep): 
 
-    urls_binaries = dict()
-    urls_binaries['urls'] = set()
-    urls_binaries['binaries'] = set()
+    url_paths = set()
 
     ## Scroll to the end of the page, used for loading the next page
     def scroll_to_end(driver):
@@ -126,7 +128,7 @@ def extract(query, max_num_links, driver, sleep):
 
     results_start = 0
 
-    while len(urls_binaries['urls']) < max_num_links: 
+    while len(url_paths) < max_num_links: 
         ##scroll_to_end(driver)
 
         ## Our thumbnail results are all of the images in our results
@@ -134,7 +136,7 @@ def extract(query, max_num_links, driver, sleep):
         num_results = len(thumbnail_results)
         print(f"Found: {num_results} search results. Extracting links from {results_start}:{num_results}")
 
-        while len(urls_binaries['urls']) != max_num_links:
+        while len(url_paths) != max_num_links:
             for object in thumbnail_results[results_start:num_results]:
                 try: 
                     WebDriverWait(driver, 5).until(EC.element_to_be_clickable(object)).click()
@@ -145,7 +147,7 @@ def extract(query, max_num_links, driver, sleep):
                 ## Our image object is the extractable image
                 image_object = driver.find_elements(By.CSS_SELECTOR, 'img.n3VNCb')
                 for image in image_object: 
-                    if len(urls_binaries['urls']) != max_num_links:
+                    if len(url_paths) != max_num_links:
                         ## The image link
                         if (image.get_attribute('src') and 'http' in image.get_attribute('src')):
                             url = image.get_attribute('src')
@@ -159,27 +161,30 @@ def extract(query, max_num_links, driver, sleep):
                             except Exception as e:
                                  print(f"{e.args} | Error Here, going to the next image")
                                  continue;
-                            urls_binaries['urls'].add(url_check)
-                            urls_binaries['binaries'].add(binary_check)
-                            print(f'Amount of images {len(urls_binaries["urls"])} | url: {url}')
+    
+                            check_dir(url, True)
+                            url_path = os.path.join(path, url)
+                            save_image(binary_check, url_path)
+                            url_paths.add(url_path)
+
+                            ##urls_binaries['binaries'].add(binary_check)
+                            print(f'Amount of images {len(url_paths)} | url: {url} | url path: {url_path}')
                     else: 
                         break;
 
-                if len(urls_binaries['urls']) == max_num_links:
+                if len(url_paths) == max_num_links:
                     break
                 
             
         else:
 
-            if len(urls_binaries['urls']) == max_num_links:
+            if len(url_paths) == max_num_links:
                 print(f"Completed: Found {max_num_links} images")
             else: 
-                print("Found:", len(urls_binaries['urls']), "image links, looking for more ...")
+                print("Found:", len(url_paths), "image links, looking for more ...")
                 time.sleep(30)
                 load_more_button = driver.find_element(By.CSS_SELECTOR, ".mye4qd")
                 if load_more_button:
                     driver.execute_script("document.querySelector('.mye4qd').click();")
 
-    urls_binaries['urls'] = list(urls_binaries['urls'])
-    urls_binaries['binaries'] = list(urls_binaries['binaries'])
-    return urls_binaries
+    return url_paths
