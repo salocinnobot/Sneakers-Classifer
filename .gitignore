@@ -12,3 +12,6 @@ env/
 
 ## Our chrome driver, instead we upload the zipped file that allows users to create their own 
 chromedriver
+
+## These files contain our images for sneakers, we will upload these later
+images/

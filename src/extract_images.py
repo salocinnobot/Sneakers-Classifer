@@ -29,8 +29,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 ## Creates directory if it does not exits
-def check_dir(folder, create: bool):
-    root = os.path.abspath(os.path.curdir)
+def check_dir(path, folder, create: bool):
+    root = path
     if folder not in os.listdir(root) and create:
         os.mkdir(os.path.join(root, folder))
     return 
@@ -116,6 +116,8 @@ def category(resell_link, driver, sleep):
 def extract(query, max_num_links, path, driver, sleep): 
 
     url_paths = set()
+    url_map = dict()
+    url_avg_size = 0
 
     ## Scroll to the end of the page, used for loading the next page
     def scroll_to_end(driver):
@@ -153,6 +155,7 @@ def extract(query, max_num_links, path, driver, sleep):
                             url = image.get_attribute('src')
                             try:
                                 url_check = test_url(url)
+                                url not in url_map
                             except Exception as e: 
                                 print(f"{e.args} | Error Here, going to the next image")
                                 continue;
@@ -162,12 +165,21 @@ def extract(query, max_num_links, path, driver, sleep):
                                  print(f"{e.args} | Error Here, going to the next image")
                                  continue;
     
-                            check_dir(url, True)
-                            url_path = os.path.join(path, url)
+                            ## Add the url to the map
+                            url_map[url] = str(len(url_paths)+1)
+
+                            ## Check that the index is not in our directory, and create the path 
+                            check_dir(path, url_map[url], False)
+                            url_path = os.path.join(path, url_map[url])
+
+                            ## Save the image to the path
                             save_image(binary_check, url_path)
+
+                            url_avg_size = ((url_avg_size)*(len(url_paths)/(len(url_paths)+1))) + ((os.stat(url_path).st_size)/(len(url_paths)+1))
+                            print(f'Average image size for folder {url_avg_size}')
+
                             url_paths.add(url_path)
 
-                            ##urls_binaries['binaries'].add(binary_check)
                             print(f'Amount of images {len(url_paths)} | url: {url} | url path: {url_path}')
                     else: 
                         break;
@@ -187,4 +199,4 @@ def extract(query, max_num_links, path, driver, sleep):
                 if load_more_button:
                     driver.execute_script("document.querySelector('.mye4qd').click();")
 
-    return url_paths
+    return (url_avg_size, url_map, url_paths)

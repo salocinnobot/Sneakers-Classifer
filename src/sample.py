@@ -84,13 +84,17 @@ if __name__ == "__main__":
     ## Creating/Checking directories for all of our sneakers 
 
     ## Create our directory for images
-    eis.check_dir("images", True)
-    imagesPath = os.chdir(os.path.join(root, "images"))
+    eis.check_dir(root, "images", True)
+    os.chdir(os.path.join(root, "images"))
+    path = os.path.abspath(os.path.curdir)
 
-
+    ## Create our directory for each sneaker's images
     sneaker_dict = sneaker_df.to_dict(orient = 'index')
     for (index, sneaker) in sneaker_dict.items(): 
-        eis.check_dir(index, True)
+        eis.check_dir(path, index, True)
+
+    ## Let's keep track of our average folder size 
+    folder_avg_size = 0 
 
     
     ## Establish connection to Database
@@ -107,16 +111,27 @@ if __name__ == "__main__":
     max_num_links = 50
 
     try:
-        for (index, sneaker_data) in sneaker_dict.items():
-            eis.check_dir(index, True)
-            query = sneaker_data["query"]
-            path = os.path.join(root, index)
-            url_paths = eis.extract(query, max_num_links, path, driver, 1) 
-            print(len(os.listdir(os.path.join(path, index))), len(url_paths))
-            assert(len(os.listdir(os.path.join(path, index))) == max_num_links & len(url_paths) == max_num_links)
+        for count, (index, sneaker_data) in enumerate(sneaker_dict.items()):
+            eis.check_dir(path, index, True)
 
-            sneaker_dict[index]['url_paths'] = url_paths
-            break;
+            query = sneaker_data["query"]
+
+            sneaker_path = os.path.join(path, index)
+            ## If our path of images for a particular sneaker already equals 50, we will move to the next shoe
+            if (len(os.listdir(sneaker_path)) == max_num_links): 
+                    count-=1 
+                    continue;
+
+            avg_size, url_map, url_paths = eis.extract(query, max_num_links, sneaker_path, driver, 1)
+
+            folder_avg_size = ((folder_avg_size)*(count/count+1)) + (avg_size/(count+1))
+            
+            print(f'The average folder size is {folder_avg_size}')
+
+            print(len(os.listdir(sneaker_path)), len(url_paths))
+            assert(len(os.listdir(sneaker_path)) == max_num_links & len(url_paths) == max_num_links)
+
+            sneaker_dict[index]['url_maps'] = url_map;
         
         sneaker_df = pd.DataFrame.from_dict(sneaker_dict, orient = 'index')
         items = [{sneaker: details} for (sneaker,details) in sneaker_df.to_dict(orient='index').items()]
